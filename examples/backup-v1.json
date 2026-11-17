@@ -1,0 +1,164 @@
+{
+  "format": "okozukai-backup",
+  "formatVersion": 1,
+  "exportedAt": "2026-11-17T00:01:00.000Z",
+  "appVersion": "1.0.0-example",
+  "currency": "JPY",
+  "categories": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "kind": "EXPENSE",
+      "name": "食費",
+      "sortOrder": 0,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "kind": "EXPENSE",
+      "name": "交通費",
+      "sortOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "kind": "EXPENSE",
+      "name": "日用品",
+      "sortOrder": 2,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "kind": "EXPENSE",
+      "name": "趣味・娯楽",
+      "sortOrder": 3,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "kind": "EXPENSE",
+      "name": "交際費",
+      "sortOrder": 4,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "kind": "EXPENSE",
+      "name": "学習",
+      "sortOrder": 5,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "kind": "EXPENSE",
+      "name": "その他",
+      "sortOrder": 6,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "kind": "INCOME",
+      "name": "バイト代",
+      "sortOrder": 0,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "kind": "INCOME",
+      "name": "お小遣い",
+      "sortOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "kind": "INCOME",
+      "name": "その他",
+      "sortOrder": 2,
+      "isActive": true
+    }
+  ],
+  "transactions": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "kind": "EXPENSE",
+      "amountYen": 650,
+      "categoryId": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-11-01",
+      "note": "昼ごはん",
+      "createdAt": "2026-11-17T00:00:01.000Z",
+      "updatedAt": "2026-11-17T00:00:01.000Z"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "kind": "EXPENSE",
+      "amountYen": 240,
+      "categoryId": "00000000-0000-4000-8000-000000000002",
+      "date": "2026-11-02",
+      "note": "バス",
+      "createdAt": "2026-11-17T00:00:02.000Z",
+      "updatedAt": "2026-11-17T00:00:02.000Z"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "kind": "EXPENSE",
+      "amountYen": 1000,
+      "categoryId": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-11-02",
+      "note": "食材",
+      "createdAt": "2026-11-17T00:00:03.000Z",
+      "updatedAt": "2026-11-17T00:00:03.000Z"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000004",
+      "kind": "INCOME",
+      "amountYen": 50000,
+      "categoryId": "00000000-0000-4000-8000-000000000008",
+      "date": "2026-11-03",
+      "note": "バイト代",
+      "createdAt": "2026-11-17T00:00:04.000Z",
+      "updatedAt": "2026-11-17T00:00:04.000Z"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000005",
+      "kind": "EXPENSE",
+      "amountYen": 500,
+      "categoryId": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-10-31",
+      "note": "前月の食費",
+      "createdAt": "2026-11-17T00:00:05.000Z",
+      "updatedAt": "2026-11-17T00:00:05.000Z"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000006",
+      "kind": "EXPENSE",
+      "amountYen": 700,
+      "categoryId": "00000000-0000-4000-8000-000000000001",
+      "date": "2026-12-01",
+      "note": "未来日を指定した記録の例",
+      "createdAt": "2026-11-17T00:00:06.000Z",
+      "updatedAt": "2026-11-17T00:00:06.000Z"
+    }
+  ],
+  "monthlyBudgets": [
+    {
+      "month": "2026-11",
+      "amountYen": 30000
+    }
+  ],
+  "categoryBudgets": [
+    {
+      "month": "2026-11",
+      "categoryId": "00000000-0000-4000-8000-000000000001",
+      "amountYen": 1000
+    }
+  ],
+  "savingsGoals": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "name": "旅行",
+      "targetAmountYen": 100000,
+      "savedAmountYen": 20000,
+      "createdAt": "2026-11-17T00:00:00.000Z",
+      "updatedAt": "2026-11-17T00:00:00.000Z"
+    }
+  ]
+}
