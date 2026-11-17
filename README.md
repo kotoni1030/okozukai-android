@@ -32,6 +32,12 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 | ファイル | 内容 |
 |---|---|
+| app/src/main/java/jp/local/okozukai/ui/ | Composeの画面と、入力・処理状態を制御するViewModel |
+| app/src/main/java/jp/local/okozukai/data/local/ | Roomのテーブル・SQL・新規DBの初期カテゴリ |
+| app/src/main/java/jp/local/okozukai/data/repository/ | 保存・編集・集計・復元の整合性とトランザクション |
+| app/src/main/java/jp/local/okozukai/data/backup/ | JSON契約・厳密な検証・容量制限・ファイルストリーム処理 |
+| app/src/main/java/jp/local/okozukai/model/ | 金額・日付・文字数など画面に依存しない検証 |
+| app/schemas/ | バージョン管理するRoomのschema JSON |
 | [AGENTS.md](AGENTS.md) | 実装するAIの作業方針、守るルール、完了条件 |
 | [docs/requirements.md](docs/requirements.md) | 機能の範囲、計算ルール、軽快さの目標 |
 | [docs/architecture.md](docs/architecture.md) | Kotlin等の役割、構成、環境準備 |
@@ -45,31 +51,12 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 | [docs/toolchain.md](docs/toolchain.md) | P0の環境調査結果、環境導入と検証の手順 |
 | [examples/backup-v1.json](examples/backup-v1.json) | 架空データを使ったバックアップの例 |
 
-## 使い方
-
-1. 新規プロジェクトの最上位に `AGENTS.md` と `docs/`、`examples/` を置きます。このフォルダ自体を開発場所にしても構いません。
-2. AIに以下の開始用指示を渡します。
-3. 最初は開発環境と「支出を1件保存して再起動後にも見られる」段階まで進めます。段階ごとに説明と動作確認を受け取ってください。
-4. 日常利用前に、実機でファイルの書き出し・復元を確認します。
-
-### AIに渡す開始用指示
-
-```text
-このフォルダのAGENTS.mdを読み、指定された順序でdocs内の資料を確認してください。
-Kotlin初心者にも理解できるよう、変更したファイルの役割を短く説明しながら実装してください。
-まず実行環境と既存ファイルを確認し、docs/implementation-plan.mdのP0とP1を実装してください。
-安定版の依存関係を公式情報で確認し、採用したバージョンとビルド結果を記録してください。
-支出の入力、Roomへの保存、履歴表示、再起動後の保持までを一つの動作する区切りにしてください。
-仕様案として記載された可逆的な選択は、その案を採用して進めてください。
-未実行のテストや実機確認は未実行と明記してください。
-```
-
 ## 最初に知っておくこと
 
 - 画面、収支計算、端末内保存をKotlinで実装します。サーバー用言語は初期版にはありません。
 - アプリの収支は記録した金額の差です。銀行口座や財布の残高ではありません。
 - 初期のカテゴリ名、対応Androidの下限、配色などは変更可能な仕様案です。
-- 開発PCとAndroid実機の仕様は未確認です。初期設定で確認し、まず利用可能な実機またはエミュレーターで検証します。
+- 開発PCとAPI 37エミュレーターで検証しています。Android実機の機種・OS・メモリは未確認です。
 - Androidのデータ消去・アンインストールに備えるため、手動バックアップを用意します。
 
 ## 公開に向けて

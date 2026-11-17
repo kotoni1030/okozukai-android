@@ -10,13 +10,12 @@ import jp.local.okozukai.data.backup.*
 import jp.local.okozukai.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.time.YearMonth
 
 data class ScreenState(val loading: Boolean=true, val busy: Boolean=false, val error: String?=null, val message: String?=null,
     val data: MonthData?=null, val rows: List<Entry> = emptyList(), val more: Boolean=false, val reset: Int=0,
-    val preview: Pair<Backup,Snapshot>?=null)
+    val preview: Pair<Backup,Snapshot>?=null, val messageMonth:String?=null)
 class LedgerViewModel(application: Application, private val saved: SavedStateHandle): AndroidViewModel(application) {
     private val repo=(application as LedgerApplication).container.repository
     val month = saved.getStateFlow("month",YearMonth.now().toString())
@@ -26,20 +25,25 @@ class LedgerViewModel(application: Application, private val saved: SavedStateHan
     val state=mutable.asStateFlow()
     val generation get()=repo.generation
     private var reading: Job?=null
-    init { reload() }
+    init {
+        reload()
+        viewModelScope.launch {
+            repo.changes.catch { }.collect { if(!state.value.busy) reload() }
+        }
+    }
     fun tab(value: String) { if(!state.value.busy) saved["tab"]=value }
     fun moveMonth(delta: Long) {
         if(state.value.busy) return
         val next=YearMonth.parse(month.value).plusMonths(delta)
         if(next.year in 1900..2199) { saved["month"]=next.toString(); reload() }
     }
-    fun selectMonth(value: String) { saved["month"]=value; reload() }
-    fun filter(value: String?) { saved["filter"]=value; saved["tab"]="履歴"; reload() }
-    fun clearMessage() { mutable.update { it.copy(message=null) } }
+    fun selectMonth(value: String) { if(!state.value.busy) { jp.local.okozukai.model.month(value); saved["month"]=value; reload() } }
+    fun filter(value: String?) { if(!state.value.busy) { saved["filter"]=value; saved["tab"]="履歴"; reload() } }
+    fun clearMessage() { mutable.update { it.copy(message=null,messageMonth=null) } }
     fun reload() {
         reading?.cancel()
         reading=viewModelScope.launch {
-            mutable.update { it.copy(loading=true,error=null) }
+            mutable.update { it.copy(loading=true,error=null,data=null,rows=emptyList(),more=false) }
             try {
                 val m=YearMonth.parse(month.value)
                 val data=repo.load(m); val rows=repo.page(m,filter.value)
@@ -62,7 +66,7 @@ class LedgerViewModel(application: Application, private val saved: SavedStateHan
     private fun action(success: String, work: suspend ()->Unit, done: ()->Unit = {}) {
         if(state.value.busy) return
         reading?.cancel()
-        mutable.update { it.copy(busy=true,message=null,error=null) }
+        mutable.update { it.copy(busy=true,loading=false,message=null,messageMonth=null,error=null) }
         viewModelScope.launch {
             try {
                 work()
@@ -73,7 +77,9 @@ class LedgerViewModel(application: Application, private val saved: SavedStateHan
         }
     }
     fun saveEntry(id: String?, kind: String, amount: String, category: String, date: String, note: String, expected: Long, done: ()->Unit) =
-        action("${date}に保存しました", { repo.saveEntry(id,kind,amount,category,date,note,expected) }, done)
+        action("${date}に保存しました", { repo.saveEntry(id,kind,amount,category,date,note,expected) }, {
+            mutable.update { it.copy(messageMonth=YearMonth.from(jp.local.okozukai.model.date(date)).toString()) }; done()
+        })
     fun deleteEntry(id: String, expected: Long, done: ()->Unit) = action("削除しました",{repo.deleteEntry(id,expected)},done)
     fun saveBudgets(overall: String, values: Map<String,String>, expected: Long, done: ()->Unit) =
         action("予算を保存しました",{repo.saveBudgets(month.value,overall,values,expected)},done)
@@ -86,19 +92,14 @@ class LedgerViewModel(application: Application, private val saved: SavedStateHan
         withContext(Dispatchers.IO) {
             val bytes=BackupCodec.encode(snapshot,Instant.now())
             val resolver=getApplication<Application>().contentResolver
-            try { requireNotNull(resolver.openOutputStream(uri,"wt")).use { it.write(bytes); it.flush() } }
+            try { BackupStreams.write(requireNotNull(resolver.openOutputStream(uri,"wt")),bytes) }
             catch(e: Exception) { throw IllegalArgumentException("書き出しに失敗しました。保存先に未完成のファイルが残っている可能性があります。",e) }
         }
     })
     fun inspect(uri: Uri) = action("バックアップの検証が完了しました", {
         val preview=withContext(Dispatchers.IO) {
             val resolver=getApplication<Application>().contentResolver
-            val bytes=requireNotNull(resolver.openInputStream(uri)).use { stream ->
-                val output=ByteArrayOutputStream(); val buffer=ByteArray(8192)
-                while(true) { val n=stream.read(buffer); if(n<0) break; require(output.size()+n<=MAX_BYTES) { "32MiB以下のファイルを選んでください" }; output.write(buffer,0,n) }
-                output.toByteArray()
-            }
-            BackupCodec.decode(bytes)
+            BackupStreams.read(requireNotNull(resolver.openInputStream(uri)))
         }
         mutable.update { it.copy(preview=preview) }
     })

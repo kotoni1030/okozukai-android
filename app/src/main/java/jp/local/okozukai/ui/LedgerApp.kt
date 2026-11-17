@@ -19,6 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.local.okozukai.data.local.*
@@ -43,7 +46,12 @@ fun yen(value: Long) = NumberFormat.getIntegerInstance(Locale.JAPAN).format(valu
     var editingEntry by rememberSaveable(state.reset,stateSaver=entrySaver) { mutableStateOf<Entry?>(null) }
     var editingGoal by rememberSaveable(state.reset,stateSaver=goalSaver) { mutableStateOf<Goal?>(null) }
     val snack=remember { SnackbarHostState() }
-    LaunchedEffect(state.message) { state.message?.let { snack.showSnackbar(it); vm.clearMessage() } }
+    LaunchedEffect(state.message) { state.message?.let {
+        val target=state.messageMonth?.takeIf {it!=month}
+        val result=snack.showSnackbar(it,actionLabel=target?.let {"保存月へ"})
+        if(result==SnackbarResult.ActionPerformed && target!=null) vm.selectMonth(target)
+        vm.clearMessage()
+    } }
     // resetを保存状態のキーにして、復元成功時だけ古いフォームを破棄する。
     BackHandler(enabled=state.busy && editor==null) {}
     val data=state.data
@@ -63,7 +71,7 @@ fun yen(value: Long) = NumberFormat.getIntegerInstance(Locale.JAPAN).format(valu
         }) { Text("＋記録",Modifier.padding(horizontal=12.dp)) } },
         snackbarHost={SnackbarHost(snack)}
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
             if(state.busy || state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             state.error?.let { error ->
                 Text(error,color=MaterialTheme.colorScheme.error,modifier=Modifier.padding(12.dp))
@@ -231,12 +239,15 @@ private fun budgetText(budget:Long?,spent:Long):String {
     }
     if(discard) Confirm("変更の破棄","入力途中の変更を破棄しますか？",busy,{discard=false}) {discard=false; close()}
 }
-@Composable private fun MoneyField(value:String,change:(String)->Unit,label:String,busy:Boolean,zero:Boolean=false,optional:Boolean=false) {
+@Composable private fun MoneyField(value:String,change:(String)->Unit,label:String,busy:Boolean,zero:Boolean=false,optional:Boolean=false,autoFocus:Boolean=false) {
+    val focus=remember {FocusRequester()}
+    val keyboard=LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) {if(autoFocus) {focus.requestFocus(); keyboard?.show()}}
     var touched by rememberSaveable {mutableStateOf(false)}
     val error=if(touched && !(optional && value.isBlank())) runCatching {amount(value,zero)}.exceptionOrNull()?.message else null
     OutlinedTextField(value,{touched=true; change(it)},label={Text(label)},enabled=!busy,singleLine=true,
         keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),isError=error!=null,
-        supportingText={if(error!=null) Text(error)},modifier=Modifier.fillMaxWidth())
+        supportingText={if(error!=null) Text(error)},modifier=Modifier.fillMaxWidth().focusRequester(focus))
 }
 @OptIn(ExperimentalLayoutApi::class)
 @Composable private fun EntryEditor(old:Entry?,categories:List<Category>,busy:Boolean,generation:Long,
@@ -254,7 +265,7 @@ private fun budgetText(budget:Long?,spent:Long):String {
     val dirty=money!=(old?.amountYen?.toString() ?: "") || category!=(old?.categoryId ?: "") || note!=(old?.note ?: "") || kind!=(old?.kind ?: "EXPENSE") || day!=(old?.let {LocalDate.ofEpochDay(it.dateEpochDay).toString()} ?: LocalDate.now().toString())
     EditorFrame(if(old==null) "記録を追加" else "記録を編集",busy,dirty,close) {
         Row { listOf("EXPENSE" to "支出","INCOME" to "収入").forEach { (value,label) -> FilterChip(selected=kind==value,onClick={kind=value; category=""},label={Text(label)},enabled=!busy) } }
-        MoneyField(money,{money=it},"金額（円）",busy)
+        MoneyField(money,{money=it},"金額（円）",busy,autoFocus=old==null)
         Text("カテゴリ")
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             categories.filter {it.kind==kind && (it.isActive || it.id==old?.categoryId)}.forEach { c ->
@@ -264,7 +275,10 @@ private fun budgetText(budget:Long?,spent:Long):String {
         if(attempted && category.isEmpty()) Text("カテゴリを選択してください",color=MaterialTheme.colorScheme.error)
         OutlinedButton(enabled=!busy,onClick={
             val d=runCatching {date(day)}.getOrDefault(LocalDate.now())
-            DatePickerDialog(context,{_,y,m,v -> day=LocalDate.of(y,m+1,v).toString()},d.year,d.monthValue-1,d.dayOfMonth).show()
+            DatePickerDialog(context,{_,y,m,v -> day=LocalDate.of(y,m+1,v).toString()},d.year,d.monthValue-1,d.dayOfMonth).apply {
+                datePicker.minDate=LocalDate.of(1900,1,1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                datePicker.maxDate=LocalDate.of(2199,12,31).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            }.show()
         }) {Text("日付を選ぶ")}
         val dayError=runCatching {date(day)}.exceptionOrNull()?.message
         OutlinedTextField(day,{day=it},label={Text("日付（YYYY-MM-DD）")},enabled=!busy,singleLine=true,isError=dayError!=null,supportingText={if(dayError!=null) Text(dayError)})
@@ -299,12 +313,12 @@ private fun budgetText(budget:Long?,spent:Long):String {
     var overall by rememberSaveable {mutableStateOf(data.budget?.amountYen?.toString() ?: "")}
     val categories=data.categories.filter {it.kind=="EXPENSE"}
     val initial=categories.associate {c -> c.id to (data.budgets.find {it.categoryId==c.id}?.amountYen?.toString() ?: "")}
-    var values by rememberSaveable {mutableStateOf(HashMap(initial))}
+    var values by rememberSaveable {mutableStateOf<Map<String,String>>(initial)}
     var error by remember {mutableStateOf<String?>(null)}
     EditorFrame("予算を編集",busy,overall!=(data.budget?.amountYen?.toString() ?: "") || values!=initial,close) {
         Text("空欄は未設定、0は0円の上限です。月全体とカテゴリは独立した上限です。")
         MoneyField(overall,{overall=it},"月全体（円）",busy,zero=true,optional=true)
-        categories.forEach {c -> MoneyField(values[c.id] ?: "",{values=HashMap(values).apply {put(c.id,it)}},c.name+"（円）",busy,zero=true,optional=true) }
+        categories.forEach {c -> MoneyField(values[c.id] ?: "",{values=values+(c.id to it)},c.name+"（円）",busy,zero=true,optional=true) }
         error?.let {Text(it,color=MaterialTheme.colorScheme.error)}
         Button(onClick={try { (values.values+overall).filter {it.isNotBlank()}.forEach {amount(it,true)}; save(overall,values,expected) } catch(e:IllegalArgumentException) {error=e.message}},enabled=!busy) {Text("予算を保存")}
     }

@@ -14,6 +14,7 @@ import java.util.UUID
 data class MonthData(val categories: List<Category>, val totals: Totals, val days: List<DayTotals>, val categoryTotals: List<CategoryTotal>, val budget: MonthlyBudget?, val budgets: List<CategoryBudget>, val goals: List<Goal>)
 class LedgerRepository(private val db: LedgerDatabase, private val clock: Clock = Clock.systemDefaultZone()) {
     private val dao = db.ledger()
+    val changes = db.invalidationTracker.createFlow("categories","transactions","monthly_budgets","category_budgets","savings_goals",emitInitialState=false)
     private val writes = Mutex()
     @Volatile var generation = 0L
         private set

@@ -1,7 +1,6 @@
 package jp.local.okozukai.data.local
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LedgerDao {
@@ -11,7 +10,6 @@ interface LedgerDao {
     @Query("SELECT * FROM monthly_budgets") suspend fun monthlyBudgets(): List<MonthlyBudget>
     @Query("SELECT * FROM category_budgets") suspend fun categoryBudgets(): List<CategoryBudget>
     @Query("SELECT * FROM savings_goals ORDER BY createdAt DESC, id DESC") suspend fun goals(): List<Goal>
-    @Query("SELECT COUNT(*) FROM transactions") fun changes(): Flow<Int>
     @Query("SELECT (SELECT COUNT(*) FROM categories)+(SELECT COUNT(*) FROM transactions)+(SELECT COUNT(*) FROM monthly_budgets)+(SELECT COUNT(*) FROM category_budgets)+(SELECT COUNT(*) FROM savings_goals)") suspend fun count(): Int
     @Query("""SELECT * FROM transactions WHERE dateEpochDay>=:start AND dateEpochDay<:end
         AND (:category IS NULL OR categoryId=:category)
